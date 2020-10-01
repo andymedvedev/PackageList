@@ -20,7 +20,7 @@ let rawGitHubBaseURL = URLComponents(string: "https://raw.githubusercontent.com"
 
 // We have a special Personal Access Token (PAT) which is used to increase our rate limit allowance up to 5,000 to enable
 // us to process every package.
-let patToken = ProcessInfo.processInfo.environment["GH_API_TOKEN_BASE64"]?.trimmingCharacters(in: .whitespacesAndNewlines)
+let patToken = ProcessInfo.processInfo.environment["GITHUB_TOKEN"]?.trimmingCharacters(in: .whitespacesAndNewlines)
 
 if patToken == nil {
     print("Warning: Using anonymous authentication -- you will quickly run into rate limiting issues\n")
@@ -105,7 +105,7 @@ func downloadSync(url: String, timeout: Int = 10) -> Result<Data, ValidatorError
     var request = URLRequest(url: apiURL)
     
     if let token = patToken, apiURL.host?.contains(SourceHost.GitHub.rawValue) == true {
-        request.addValue("Basic \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
     
     let task = session.dataTask(with: request) { (data, response, error) in
@@ -328,6 +328,73 @@ struct SwiftPackage: Decodable {
     let repo: Repository
 }
 
+extension Sequence {
+    func noneSatisfy(_ predicate: (Element) throws -> Bool) rethrows -> Bool {
+        try allSatisfy { try !predicate($0) }
+    }
+
+    func anySatisfy(_ predicate: (Element) throws -> Bool) rethrows -> Bool {
+        try !noneSatisfy(predicate)
+    }
+}
+
+func allowed(_ url: URL) -> Bool {
+    [
+    "/IBM-Swift/BlueCryptor.git", "/Kitura/BlueCryptor.git",
+    "/IBM-Swift/BlueECC.git", "/Kitura/BlueECC.git",
+    "/IBM-Swift/BlueRSA.git", "/Kitura/BlueRSA.git",
+    "/IBM-Swift/BlueSignals.git", "/Kitura/BlueSignals.git",
+    "/IBM-Swift/BlueSocket.git", "/Kitura/BlueSocket.git",
+    "/IBM-Swift/BlueSSLService.git", "/Kitura/BlueSSLService.git",
+    "/IBM-Swift/CCurl.git", "/Kitura/CCurl.git",
+    "/IBM-Swift/cepoll.git", "/Kitura/CEpoll.git",
+    "/IBM-Swift/CircuitBreaker.git", "/Kitura/CircuitBreaker.git",
+    "/IBM-Swift/cloudenvironment.git", "/Kitura/CloudEnvironment.git",
+    "/IBM-Swift/Configuration.git", "/Kitura/Configuration.git",
+    "/IBM-Swift/czlib.git", "/Kitura/CZlib.git",
+    "/IBM-Swift/filekit.git", "/Kitura/FileKit.git",
+    "/IBM-Swift/health.git", "/Kitura/Health.git",
+    "/IBM-Swift/heliumlogger.git", "/Kitura/HeliumLogger.git",
+    "/IBM-Swift/kitura-cache.git", "/Kitura/Kitura-Cache.git",
+    "/IBM-Swift/kitura-cors.git", "/Kitura/Kitura-CORS.git",
+    "/IBM-Swift/kitura-couchdb.git", "/Kitura/Kitura-CouchDB.git",
+    "/IBM-Swift/Kitura-Credentials.git", "/Kitura/Kitura-Credentials.git",
+    "/IBM-Swift/Kitura-CredentialsGithub.git", "/Kitura/Kitura-CredentialsGitHub.git",
+    "/IBM-Swift/Kitura-CredentialsGoogle.git", "/Kitura/Kitura-CredentialsGoogle.git",
+    "/IBM-Swift/Kitura-CredentialsHTTP.git", "/Kitura/Kitura-CredentialsHTTP.git",
+    "/IBM-Swift/kitura-markdown.git", "/Kitura/Kitura-Markdown.git",
+    "/IBM-Swift/kitura-mustachetemplateengine.git", "/Kitura/Kitura-MustacheTemplateEngine.git",
+    "/IBM-Swift/Kitura-net.git", "/Kitura/Kitura-net.git",
+    "/IBM-Swift/kitura-nio.git", "/Kitura/Kitura-NIO.git",
+    "/IBM-Swift/kitura-openapi.git", "/Kitura/Kitura-OpenAPI.git",
+    "/IBM-Swift/kitura-redis.git", "/Kitura/Kitura-redis.git",
+    "/IBM-Swift/kitura-session-redis.git", "/Kitura/Kitura-Session-Redis.git",
+    "/IBM-Swift/kitura-session.git", "/Kitura/Kitura-Session.git",
+    "/IBM-Swift/kitura-stenciltemplateengine.git", "/Kitura/Kitura-StencilTemplateEngine.git",
+    "/IBM-Swift/kitura-templateengine.git", "/Kitura/Kitura-TemplateEngine.git",
+    "/IBM-Swift/kitura-websocket.git", "/Kitura/Kitura-WebSocket.git",
+    "/IBM-Swift/Kitura.git", "/Kitura/Kitura.git",
+    "/IBM-Swift/KituraContracts.git", "/Kitura/KituraContracts.git",
+    "/IBM-Swift/KituraKit.git", "/Kitura/KituraKit.git",
+    "/IBM-Swift/LoggerAPI.git", "/Kitura/LoggerAPI.git",
+    "/IBM-Swift/OpenSSL.git", "/Kitura/OpenSSL.git",
+    "/IBM-Swift/swift-cfenv.git", "/Kitura/Swift-cfenv.git",
+    "/IBM-Swift/swift-html-entities.git", "/Kitura/swift-html-entities.git",
+    "/IBM-Swift/Swift-JWT.git", "/Kitura/Swift-JWT.git",
+    "/IBM-Swift/Swift-Kuery-ORM.git", "/Kitura/Swift-Kuery-ORM.git",
+    "/IBM-Swift/Swift-Kuery-PostgreSQL.git", "/Kitura/Swift-Kuery-PostgreSQL.git",
+    "/IBM-Swift/Swift-Kuery-SQLite.git", "/Kitura/Swift-Kuery-SQLite.git",
+    "/IBM-Swift/Swift-Kuery.git", "/Kitura/Swift-Kuery.git",
+    "/IBM-Swift/swift-smtp.git", "/Kitura/Swift-SMTP.git",
+    "/IBM-Swift/swiftkafka.git", "/Kitura/SwiftKafka.git",
+    "/IBM-Swift/SwiftKueryMySQL.git", "/Kitura/SwiftKueryMySQL.git",
+    "/IBM-Swift/SwiftyRequest.git", "/Kitura/SwiftyRequest.git",
+    "/IBM-Swift/typedecoder.git", "/Kitura/TypeDecoder.git",
+    "/tg908/closurepublisher.git", "/tgymnich/ClosurePublisher.git",
+    "/tinrobots/Mechanica.git", "/alemar11/Mechanica.git",
+    ].anySatisfy { url.absoluteString.contains($0) }
+}
+
 class PackageFetcher {
     
     let repoOwner: String
@@ -486,9 +553,11 @@ do {
     print("INFO: Checking for redirects and 404s ...")
     let tempStorage = filteredPackages
     var lastRequestDate = Date()
-    tempStorage.enumerated().forEach { (idx, url) in
-        if idx % 100 == 0 {
-            print("INFO: Processing package \(idx) ...")
+    tempStorage
+    .filter(allowed)
+    .enumerated().forEach { (idx, url) in
+        if idx % 1 == 0 {
+            print("INFO: Processing package \(idx) \(url.absoluteString)...")
         }
         
         let timeSinceLastRequest = abs(lastRequestDate.timeIntervalSinceNow)
@@ -556,9 +625,11 @@ do {
 do {
     print("INFO: Starting dependency analysis ...")
     var allDependencies = Set<Dependency>()
-    filteredPackages.enumerated().forEach { (idx, url) in
-        if idx % 100 == 0 {
-            print("INFO: Processing package \(idx) ...")
+    filteredPackages
+    .filter(allowed)
+    .enumerated().forEach { (idx, url) in
+        if idx % 1 == 0 {
+            print("INFO: Processing package \(idx) \(url.absoluteString)...")
         }
 
         do {
